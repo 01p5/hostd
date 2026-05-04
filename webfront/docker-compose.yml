@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: webfront-nginx
+    # Use host network mode so UFW rules apply directly
+    network_mode: host
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./domains.conf:/etc/nginx/domains.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./nginx-entrypoint.sh:/nginx-entrypoint.sh:ro
+    environment:
+      - CERTBOT_EMAIL=admin@01p5.com
+    restart: unless-stopped
+    depends_on:
+      - certbot
+    entrypoint: /bin/sh /nginx-entrypoint.sh
+
+  certbot:
+    image: certbot/certbot
+    container_name: webfront-certbot
+    volumes:
+      - ./domains.conf:/etc/nginx/domains.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./certbot-entrypoint.sh:/entrypoint.sh:ro
+    environment:
+      - CERTBOT_EMAIL=admin@01p5.com
+      - CERTBOT_STAGING=0
+    entrypoint: /bin/sh /entrypoint.sh
+    networks:
+      - certbot-network
+
+networks:
+  certbot-network:
+    driver: bridge
